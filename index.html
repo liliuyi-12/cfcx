@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>餐费查询</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; }
+        input { padding: 8px; width: 100%; box-sizing: border-box; }
+        button { padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ddd; min-height: 50px; }
+    </style>
+</head>
+<body>
+<h1>餐费查询系统</h1>
+<p>请扫描公司提供的餐费二维码，然后在此输入工号查询：</p>
+
+<div id="scanner" style="margin: 20px 0;">
+    <button onclick="scanQR()">扫描二维码</button>
+    <input type="file" id="qr-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+</div>
+
+<p>或直接输入工号查询（需已扫描二维码）：</p>
+<input type="text" id="employeeId" placeholder="请输入工号">
+<button onclick="queryMealFee()">查询</button>
+
+<div id="result"></div>
+
+<script>
+    // 存储从二维码读取的数据
+    let mealData = null;
+
+    // 触发文件选择
+    function scanQR() {
+        document.getElementById('qr-input').click();
+    }
+
+    // 处理选择的图片文件
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            decodeQRCode(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 使用JSQR库解码二维码
+    function decodeQRCode(imageData) {
+        // 这里需要引入jsQR库（见下面的说明）
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+                try {
+                    mealData = JSON.parse(code.data).data;
+                    document.getElementById('result').innerHTML = "二维码数据加载成功！";
+                } catch (e) {
+                    document.getElementById('result').innerHTML = "无效的二维码格式";
+                }
+            } else {
+                document.getElementById('result').innerHTML = "未检测到二维码";
+            }
+        };
+        img.src = imageData;
+    }
+
+    // 查询餐费
+    function queryMealFee() {
+        if (!mealData) {
+            document.getElementById('result').innerHTML = "请先扫描餐费二维码";
+            return;
+        }
+
+        const employeeId = document.getElementById('employeeId').value.trim();
+        if (!employeeId) {
+            document.getElementById('result').innerHTML = "请输入工号";
+            return;
+        }
+
+        if (mealData[employeeId] !== undefined) {
+            document.getElementById('result').innerHTML = `工号 ${employeeId} 的餐费是: ${mealData[employeeId]} 元`;
+        } else {
+            document.getElementById('result').innerHTML = "未找到该工号的餐费记录";
+        }
+    }
+</script>
+
+<!-- 引入jsQR库（离线使用） -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<!-- 也可以下载后本地引用 -->
+<!-- <script src="jsQR.js"></script> -->
+</body>
+</html>
